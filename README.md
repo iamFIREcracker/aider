@@ -100,6 +100,17 @@ Automatically lint and test your code every time aider makes changes. Aider can 
 <a href="https://aider.chat/docs/usage/copypaste.html"><img src="https://aider.chat/assets/icons/content-copy.svg" width="32" height="32" align="left" valign="middle" style="margin-right:10px"></a>
 Work with any LLM via its web chat interface. Aider streamlines copy/pasting code context and edits back and forth with a browser.
 
+<br>
+
+### Dummy Section
+
+<a href="https://aider.chat/docs/usage/dummy.html"><img src="https://aider.chat/assets/icons/help-circle-outline.svg" width="32" height="32" align="left" valign="middle" style="margin-right:10px"></a>
+This is a dummy section to demonstrate adding a new section with a code block.
+```python
+def hello_world():
+    print("Hello, Aider!")
+```
+
 ## Getting Started
 
 ```bash
