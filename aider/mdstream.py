@@ -135,8 +135,17 @@ class MarkdownStream:
         console.print(markdown)
         output = string_io.getvalue()
 
-        # Split rendered output into lines
-        return output.splitlines(keepends=True)
+        lines = []
+        for line in output.splitlines(keepends=True):
+            # Add an extra 4 backticks to every code block
+            # to reduce the likelihood of nested code blocks
+            # messing up the Markdown renderer
+            # https://github.com/Aider-AI/aider/issues/4048
+            if line.startswith("```"):
+                lines.append("````" + line)
+            else:
+                lines.append(line)
+        return lines
 
     def __del__(self):
         """Destructor to ensure Live display is properly cleaned up."""
