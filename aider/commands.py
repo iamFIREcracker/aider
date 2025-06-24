@@ -927,6 +927,28 @@ class Commands:
             # Expand tilde in the path
             expanded_word = os.path.expanduser(word)
 
+            # Check for an exact, unambiguous match to avoid dropping unintended files
+            # through substring matching in the logic below.
+            exact_matches_editable = [
+                f for f in self.coder.abs_fnames if self.coder.get_rel_fname(f) == expanded_word
+            ]
+            exact_matches_readonly = [
+                f
+                for f in self.coder.abs_read_only_fnames
+                if self.coder.get_rel_fname(f) == expanded_word
+            ]
+
+            if len(exact_matches_editable) + len(exact_matches_readonly) == 1:
+                if exact_matches_editable:
+                    abs_fname_to_drop = exact_matches_editable[0]
+                    self.coder.abs_fnames.remove(abs_fname_to_drop)
+                    self.io.tool_output(f"Removed {expanded_word} from the chat")
+                else:
+                    abs_fname_to_drop = exact_matches_readonly[0]
+                    self.coder.abs_read_only_fnames.remove(abs_fname_to_drop)
+                    self.io.tool_output(f"Removed read-only file {expanded_word} from the chat")
+                continue
+
             # Handle read-only files with substring matching and samefile check
             read_only_matched = []
             for f in self.coder.abs_read_only_fnames:
