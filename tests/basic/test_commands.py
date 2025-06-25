@@ -2224,3 +2224,54 @@ class TestCommands(TestCase):
             )
             self.assertEqual(new_coder.done_messages, [{"role": "user", "content": "d1"}])
             self.assertEqual(new_coder.cur_messages, [{"role": "user", "content": "c1"}])
+
+    def test_drop_exact_match_untracked(self):
+        io = InputOutput(pretty=False, fancy_input=False, yes=False)
+        from aider.coders import Coder
+
+        coder = Coder.create(self.GPT35, None, io)
+        commands = Commands(io, coder)
+
+        (Path(self.tempdir) / "aider.el").touch()
+        (Path(self.tempdir) / "aider-bootstrap.el").touch()
+
+        with mock.patch.object(io, "tool_output"):
+            commands.cmd_add("aider.el")
+            commands.cmd_add("aider-bootstrap.el")
+
+        self.assertEqual(len(coder.abs_fnames), 2)
+
+        with mock.patch.object(io, "tool_output") as mock_drop_output:
+            commands.cmd_drop("aider.el")
+            mock_drop_output.assert_called_with("Removed aider.el from the chat")
+
+        remaining_fnames = {coder.get_rel_fname(f) for f in coder.abs_fnames}
+        self.assertIn("aider-bootstrap.el", remaining_fnames)
+        self.assertNotIn("aider.el", remaining_fnames)
+        self.assertEqual(len(coder.abs_fnames), 1)
+
+    def test_drop_exact_match_readonly(self):
+        io = InputOutput(pretty=False, fancy_input=False, yes=False)
+        from aider.coders import Coder
+
+        coder = Coder.create(self.GPT35, None, io)
+        commands = Commands(io, coder)
+
+        (Path(self.tempdir) / "aider.el").touch()
+        (Path(self.tempdir) / "aider-bootstrap.el").touch()
+
+        with mock.patch.object(io, "tool_output"):
+            commands.cmd_read_only("aider.el")
+            commands.cmd_read_only("aider-bootstrap.el")
+
+        self.assertEqual(len(coder.abs_read_only_fnames), 2)
+
+        with mock.patch.object(io, "tool_output") as mock_drop_output:
+            commands.cmd_drop("aider.el")
+
+            mock_drop_output.assert_called_with("Removed read-only file aider.el from the chat")
+
+        remaining_fnames = {coder.get_rel_fname(f) for f in coder.abs_read_only_fnames}
+        self.assertIn("aider-bootstrap.el", remaining_fnames)
+        self.assertNotIn("aider.el", remaining_fnames)
+        self.assertEqual(len(coder.abs_read_only_fnames), 1)
