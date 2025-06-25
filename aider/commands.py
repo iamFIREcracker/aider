@@ -927,64 +927,66 @@ class Commands:
             # Expand tilde in the path
             expanded_word = os.path.expanduser(word)
 
-            # Check for an exact, unambiguous match to avoid dropping unintended files
-            # through substring matching in the logic below.
-            exact_matches_editable = [
-                f for f in self.coder.abs_fnames if self.coder.get_rel_fname(f) == expanded_word
-            ]
-            exact_matches_readonly = [
-                f
-                for f in self.coder.abs_read_only_fnames
-                if self.coder.get_rel_fname(f) == expanded_word
-            ]
+            # Collect all matches from both editable and read-only files
+            all_matched_abs_fnames = []
 
-            if len(exact_matches_editable) + len(exact_matches_readonly) == 1:
-                if exact_matches_editable:
-                    abs_fname_to_drop = exact_matches_editable[0]
-                    self.coder.abs_fnames.remove(abs_fname_to_drop)
-                    self.io.tool_output(f"Removed {expanded_word} from the chat")
-                else:
-                    abs_fname_to_drop = exact_matches_readonly[0]
-                    self.coder.abs_read_only_fnames.remove(abs_fname_to_drop)
-                    self.io.tool_output(f"Removed read-only file {expanded_word} from the chat")
-                continue
-
-            # Handle read-only files with substring matching and samefile check
-            read_only_matched = []
+            # Read-only files
             for f in self.coder.abs_read_only_fnames:
-                if expanded_word in f:
-                    read_only_matched.append(f)
-                    continue
+                if expanded_word in self.coder.get_rel_fname(f):
+                    all_matched_abs_fnames.append(f)
+                else:
+                    try:
+                        if os.path.samefile(os.path.abspath(expanded_word), f):
+                            all_matched_abs_fnames.append(f)
+                    except (FileNotFoundError, OSError):
+                        pass
 
-                # Try samefile comparison for relative paths
-                try:
-                    abs_word = os.path.abspath(expanded_word)
-                    if os.path.samefile(abs_word, f):
-                        read_only_matched.append(f)
-                except (FileNotFoundError, OSError):
-                    continue
-
-            for matched_file in read_only_matched:
-                self.coder.abs_read_only_fnames.remove(matched_file)
-                self.io.tool_output(f"Removed read-only file {matched_file} from the chat")
-
-            # For editable files, use glob if word contains glob chars, otherwise use substring
-            if any(c in expanded_word for c in "*?[]"):
-                matched_files = self.glob_filtered_to_repo(expanded_word)
+            # Editable files
+            is_glob = any(c in expanded_word for c in "*?[]")
+            if is_glob:
+                rel_paths = self.glob_filtered_to_repo(expanded_word)
+                all_matched_abs_fnames.extend([self.coder.abs_root_path(p) for p in rel_paths])
             else:
-                # Use substring matching like we do for read-only files
-                matched_files = [
-                    self.coder.get_rel_fname(f) for f in self.coder.abs_fnames if expanded_word in f
-                ]
+                all_matched_abs_fnames.extend(
+                    [
+                        f
+                        for f in self.coder.abs_fnames
+                        if expanded_word in self.coder.get_rel_fname(f)
+                    ]
+                )
 
-            if not matched_files:
-                matched_files.append(expanded_word)
+            # Deduplicate
+            all_matched_abs_fnames = list(dict.fromkeys(all_matched_abs_fnames))
 
-            for matched_file in matched_files:
-                abs_fname = self.coder.abs_root_path(matched_file)
+            # Prioritize exact matches
+            exact_matches = [
+                f for f in all_matched_abs_fnames if self.coder.get_rel_fname(f) == expanded_word
+            ]
+
+            files_to_drop = []
+            if exact_matches:
+                files_to_drop = exact_matches
+            else:
+                files_to_drop = all_matched_abs_fnames
+
+            # Handle the case where no file was matched but the user provided a literal filename
+            if not files_to_drop and not is_glob:
+                abs_fname = self.coder.abs_root_path(expanded_word)
+                if (
+                    abs_fname in self.coder.abs_fnames
+                    or abs_fname in self.coder.abs_read_only_fnames
+                ):
+                    files_to_drop.append(abs_fname)
+
+            # Drop the files
+            for abs_fname in files_to_drop:
+                rel_fname = self.coder.get_rel_fname(abs_fname)
                 if abs_fname in self.coder.abs_fnames:
                     self.coder.abs_fnames.remove(abs_fname)
-                    self.io.tool_output(f"Removed {matched_file} from the chat")
+                    self.io.tool_output(f"Removed {rel_fname} from the chat")
+                elif abs_fname in self.coder.abs_read_only_fnames:
+                    self.coder.abs_read_only_fnames.remove(abs_fname)
+                    self.io.tool_output(f"Removed read-only file {rel_fname} from the chat")
 
     def cmd_git(self, args):
         "Run a git command (output excluded from chat)"
