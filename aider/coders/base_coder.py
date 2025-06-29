@@ -338,6 +338,7 @@ class Coder:
         file_watcher=None,
         auto_copy_context=False,
         auto_accept_architect=True,
+        plan_only_architect=False,
     ):
         # Fill in a dummy Analytics if needed, but it is never .enable()'d
         self.analytics = analytics if analytics is not None else Analytics()
@@ -352,6 +353,7 @@ class Coder:
 
         self.auto_copy_context = auto_copy_context
         self.auto_accept_architect = auto_accept_architect
+        self.plan_only_architect = plan_only_architect
 
         self.ignore_mentions = ignore_mentions
         if not self.ignore_mentions:
@@ -2294,6 +2296,9 @@ class Coder:
         return res
 
     def apply_updates(self):
+        if self.edit_format == "architect" and self.plan_only_architect:
+            return set()
+
         edited = set()
         try:
             edits = self.get_edits()

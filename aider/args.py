@@ -182,6 +182,12 @@ def get_parser(default_config_files, git_root):
         help="Enable/disable automatic acceptance of architect changes (default: True)",
     )
     group.add_argument(
+        "--plan-only-architect",
+        action="store_true",
+        default=False,
+        help="Have the architect only generate a plan, without prompting to apply it.",
+    )
+    group.add_argument(
         "--weak-model",
         metavar="WEAK_MODEL",
         default=None,
