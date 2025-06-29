@@ -1433,6 +1433,38 @@ This command will print 'Hello, World!' to the console."""
                     # (because user rejected the changes)
                     mock_editor.run.assert_not_called()
 
+    def test_architect_coder_plan_only(self):
+        with GitTemporaryDirectory():
+            io = InputOutput(yes=False)
+            io.confirm_ask = MagicMock()
+
+            # Create an ArchitectCoder with plan_only_architect=True
+            with patch("aider.coders.architect_coder.AskCoder.__init__", return_value=None):
+                from aider.coders.architect_coder import ArchitectCoder
+
+                coder = ArchitectCoder()
+                coder.io = io
+                coder.main_model = self.GPT35
+                coder.auto_accept_architect = False
+                coder.plan_only_architect = True
+                coder.verbose = False
+                coder.total_cost = 0
+
+                # Mock editor_coder creation and execution
+                mock_editor = MagicMock()
+                with patch("aider.coders.architect_coder.Coder.create", return_value=mock_editor):
+                    # Set partial response content
+                    coder.partial_response_content = "Make these changes to the code"
+
+                    # Call reply_completed
+                    coder.reply_completed()
+
+                    # Verify that confirm_ask was NOT called
+                    io.confirm_ask.assert_not_called()
+
+                    # Verify that editor coder was NOT created or run
+                    mock_editor.run.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -7,6 +7,7 @@ class ArchitectCoder(AskCoder):
     edit_format = "architect"
     gpt_prompts = ArchitectPrompts()
     auto_accept_architect = False
+    plan_only_architect = False
 
     def reply_completed(self):
         content = self.partial_response_content
@@ -14,7 +15,9 @@ class ArchitectCoder(AskCoder):
         if not content or not content.strip():
             return
 
-        if not self.auto_accept_architect and not self.io.confirm_ask("Edit the files?"):
+        if self.plan_only_architect or (
+            not self.auto_accept_architect and not self.io.confirm_ask("Edit the files?")
+        ):
             return
 
         kwargs = dict()
