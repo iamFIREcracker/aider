@@ -118,7 +118,7 @@ def get_parser(default_config_files, git_root):
         const="*",
         default=None,
         metavar="MODEL",
-        help="List known models which match the (partial) MODEL name. If no argument is given, lists all models.",
+        help="List known models that match a glob pattern. If no argument is given, lists all models.",
     )
     group.add_argument(
         "--model-settings-file",
