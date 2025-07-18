@@ -1,4 +1,5 @@
 import difflib
+import fnmatch
 import hashlib
 import importlib.resources
 import json
@@ -1242,8 +1243,13 @@ def fuzzy_match_models(name):
     # if matching_models:
     #    return matching_models
 
-    # Check for model names containing the name
-    matching_models = [m for m in chat_models if name in m]
+    # Check for model names matching a glob pattern.
+    # If no wildcards, treat as a substring search.
+    pattern = name
+    if "*" not in pattern and "?" not in pattern:
+        pattern = f"*{pattern}*"
+
+    matching_models = [m for m in chat_models if fnmatch.fnmatch(m.lower(), pattern)]
     if matching_models:
         return sorted(set(matching_models))
 
